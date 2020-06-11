@@ -1,5 +1,5 @@
 # NOTE: update this with your service name
-service: notes-app-api
+service: notes-app-2-api
 
 # Create an optimized package for our functions 
 package:
@@ -10,14 +10,18 @@ plugins:
   - serverless-offline
   - serverless-dotenv-plugin # Load .env as environment variables
 
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  tableName: ${self:custom.stage}-notes
+
 provider:
   name: aws
   runtime: nodejs12.x
-  stage: prod
+  stage: dev
   region: eu-west-2
 
   environment:
-    tableName: notes
+    tableName: ${self:custom.tableName}
     stripeSecretKey: ${env:STRIPE_SECRET_KEY}
 
   iamRoleStatements:
@@ -30,7 +34,8 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
-      Resource: "arn:aws:dynamodb:eu-west-2:*:*"
+      Resource:
+        - "Fn::GetAtt": [ NotesTable, Arn ]
 
 functions:
   create:
@@ -103,4 +108,12 @@ functions:
           authorizer: aws_iam
 
 resources:
+# API Gateway Errors
   - ${file(resources/api-gateway-errors.yml)}
+# DynamoDB
+  - ${file(resources/dynamodb-table.yml)}
+# S3
+  - ${file(resources/s3-bucket.yml)}
+# Cognito
+  - ${file(resources/cognito-user-pool.yml)}
+  - ${file(resources/cognito-identity-pool.yml)}
